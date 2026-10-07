@@ -195,6 +195,32 @@ function el(tag, attrs = {}, ...children) {
   return node;
 }
 
+function prettySql(sql) {
+  try {
+    return formatDialect(sql, { dialect: postgresql, keywordCase: "upper" });
+  } catch {
+    return sql;
+  }
+}
+
+async function copy(text, message) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(message);
+  } catch {
+    // Older browsers, or a page without focus: fall back to a hidden textarea.
+    const area = el("textarea", { readonly: "" });
+    area.value = text;
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.append(area);
+    area.select();
+    const ok = document.execCommand("copy");
+    area.remove();
+    toast(ok ? message : "Could not copy. Select the text and copy it by hand.");
+  }
+}
+
 function block(title, meta, ...content) {
   return el("div", { class: "block" }, el("h2", {}, title, meta ? el("span", { class: "meta" }, meta) : null), ...content);
 }
@@ -239,11 +265,15 @@ function render(res) {
   }
 
   if (res.kind === "sql") {
-    let sql = res.sql;
-    try {
-      sql = formatDialect(res.sql, { dialect: postgresql, keywordCase: "upper" });
-    } catch {}
-    out.push(block("SQL", "PostgreSQL", el("pre", { class: "sql" }, sql)));
+    const sql = prettySql(res.sql);
+    const withValues = prettySql(res.inlined);
+    const copyButtons = el(
+      "span",
+      { class: "copy-buttons" },
+      el("button", { class: "mini", onclick: () => copy(sql, "Copied") }, "Copy"),
+      el("button", { class: "mini", onclick: () => copy(withValues, "Copied with values") }, "Copy with values"),
+    );
+    out.push(block("SQL · PostgreSQL", copyButtons, el("pre", { class: "sql" }, sql)));
     out.push(
       block(
         "Parameters",
@@ -297,6 +327,7 @@ async function share() {
 }
 
 function toast(message) {
+  document.querySelector(".toast")?.remove();
   const node = el("div", { class: "toast" }, message);
   document.body.append(node);
   setTimeout(() => node.remove(), 2600);

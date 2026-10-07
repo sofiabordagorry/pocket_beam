@@ -92,7 +92,14 @@ defmodule PocketBeam.Runner do
       true ->
         try do
           {sql, params} = PocketBeam.SQL.to_sql(value)
-          %{ok: true, kind: "sql", result: inspect(value, pretty: true), sql: sql, params: Enum.map(params, &inspect/1)}
+          %{
+            ok: true,
+            kind: "sql",
+            result: inspect(value, pretty: true),
+            sql: sql,
+            params: Enum.map(params, &inspect/1),
+            inlined: PocketBeam.SQL.inline(sql, params)
+          }
         rescue
           e -> %{ok: false, result: Exception.format(:error, e, prune(__STACKTRACE__))}
         end

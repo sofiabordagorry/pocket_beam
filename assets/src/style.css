@@ -149,6 +149,21 @@ button {
   cursor: pointer;
 }
 
+button.mini {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.copy-buttons {
+  display: flex;
+  gap: 6px;
+}
+
 button.secondary {
   background: var(--panel-2);
   color: var(--text);
