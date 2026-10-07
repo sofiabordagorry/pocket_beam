@@ -1,4 +1,4 @@
-defmodule Playground.SQL do
+defmodule PocketBeam.SQL do
   @moduledoc """
   Turns an Ecto query into Postgres SQL without a database.
 

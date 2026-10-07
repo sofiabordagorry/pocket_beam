@@ -1,4 +1,4 @@
-defmodule Playground.Application do
+defmodule PocketBeam.Application do
   @moduledoc false
 
   use Application
@@ -8,8 +8,8 @@ defmodule Playground.Application do
     # Snippets define modules over and over (`defmodule User`). Don't warn about it.
     Code.put_compiler_option(:ignore_module_conflict, true)
 
-    children = [Playground.Server] ++ bridge()
-    Supervisor.start_link(children, strategy: :one_for_one, name: Playground.Supervisor)
+    children = [PocketBeam.Server] ++ bridge()
+    Supervisor.start_link(children, strategy: :one_for_one, name: PocketBeam.Supervisor)
   end
 
   # Popcorn.Proxy only exists in the browser runtime; `mix test` runs without it.

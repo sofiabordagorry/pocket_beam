@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Elixir Playground</title>
+    <title>Pocket BEAM</title>
     <meta name="description" content="Run Elixir and Ecto in your browser. No server, no install." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,7 +16,7 @@
     <script>
       // Apply the theme before the first paint, so the page never flashes.
       try {
-        const saved = localStorage.getItem("elixir-playground:theme");
+        const saved = localStorage.getItem("pocket-beam:theme");
         document.documentElement.dataset.theme =
           saved === "light" || saved === "dark" ? saved : matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
       } catch {}
@@ -27,7 +27,7 @@
       <div class="brand">
         <span class="logo" aria-hidden="true">💧</span>
         <div>
-          <h1>Elixir Playground</h1>
+          <h1>Pocket BEAM</h1>
           <p id="versions">Booting the BEAM in your browser…</p>
         </div>
       </div>

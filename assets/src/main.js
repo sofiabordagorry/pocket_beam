@@ -24,7 +24,7 @@ const els = {
 // State: one buffer per mode, restored from the URL or a local draft
 // ---------------------------------------------------------------------------
 
-const DRAFT_KEY = "elixir-playground:drafts";
+const DRAFT_KEY = "pocket-beam:drafts";
 let mode = "elixir";
 const buffers = {
   elixir: EXAMPLES.elixir[0].code,
@@ -100,7 +100,7 @@ function editorTheme(name) {
   return [theme, syntaxHighlighting(highlight)];
 }
 
-const THEME_KEY = "elixir-playground:theme";
+const THEME_KEY = "pocket-beam:theme";
 const themeSlot = new Compartment();
 let currentTheme = initialTheme();
 document.documentElement.dataset.theme = currentTheme;
@@ -316,7 +316,7 @@ async function run() {
   els.status.textContent = "Running…";
 
   const code = editor.state.doc.toString();
-  const reply = await popcorn.genserver.call("playground", ["run", mode, code], { timeoutMs: 20_000 });
+  const reply = await popcorn.genserver.call("pocket_beam", ["run", mode, code], { timeoutMs: 20_000 });
 
   running = false;
   els.run.disabled = false;
@@ -344,7 +344,7 @@ async function boot() {
   }
 
   popcorn = result.data;
-  const info = await popcorn.genserver.call("playground", "info");
+  const info = await popcorn.genserver.call("pocket_beam", "info");
   if (info.ok) {
     const { elixir: ex, otp, ecto } = info.data;
     els.versions.textContent = `Elixir ${ex} · Erlang/OTP ${otp} · Ecto ${ecto}`;

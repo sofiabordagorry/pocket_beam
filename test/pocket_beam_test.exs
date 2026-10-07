@@ -1,7 +1,7 @@
-defmodule PlaygroundTest do
+defmodule PocketBeamTest do
   use ExUnit.Case, async: false
 
-  defp run(mode, code), do: GenServer.call(:playground, ["run", mode, code], 20_000)
+  defp run(mode, code), do: GenServer.call(:pocket_beam, ["run", mode, code], 20_000)
 
   describe "elixir mode" do
     test "returns the result and what the snippet printed" do

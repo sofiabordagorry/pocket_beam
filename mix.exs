@@ -1,9 +1,9 @@
-defmodule Playground.MixProject do
+defmodule PocketBeam.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :playground,
+      app: :pocket_beam,
       version: "0.1.0",
       elixir: "~> 1.20",
       start_permanent: Mix.env() == :prod,
@@ -14,7 +14,7 @@ defmodule Playground.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      mod: {Playground.Application, []}
+      mod: {PocketBeam.Application, []}
     ]
   end
 

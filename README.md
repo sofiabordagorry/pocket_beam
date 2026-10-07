@@ -1,4 +1,4 @@
-# Elixir Playground
+# Pocket BEAM
 
 Run Elixir and Ecto in your browser. No server, no install: the code compiles and
 runs in your tab, on the real BEAM (Erlang/OTP 29) compiled to WebAssembly with
@@ -48,16 +48,16 @@ Tests run on the regular BEAM: `mix test`.
 ## How it works
 
 ```
-Playground.Supervisor
-├─ Playground.Server   receives "run" requests from the page (via Popcorn.Proxy)
+PocketBeam.Supervisor
+├─ PocketBeam.Server   receives "run" requests from the page (via Popcorn.Proxy)
 │  └─ one Task per run, killed after 10 s
 └─ Popcorn.Proxy
 ```
 
-- `Playground.Runner` evaluates the snippet one top-level expression at a time
+- `PocketBeam.Runner` evaluates the snippet one top-level expression at a time
   (like IEx), so a snippet can define `defmodule User` and use `%User{}` below.
   It captures stdout and the compiler diagnostics.
-- `Playground.SQL` turns an `Ecto.Query` into SQL the way `Repo.to_sql/2` does
+- `PocketBeam.SQL` turns an `Ecto.Query` into SQL the way `Repo.to_sql/2` does
   internally, without a `Repo` or a connection.
 - `assets/src/main.js` is the page: CodeMirror, the output panel and the share
   link.

@@ -1,4 +1,4 @@
-defmodule Playground.Runner do
+defmodule PocketBeam.Runner do
   @moduledoc """
   Compiles and evaluates a snippet, capturing what it prints, its result and
   the compiler diagnostics (including Elixir's type warnings).
@@ -44,7 +44,7 @@ defmodule Playground.Runner do
   # variables, imports and aliases forward. This lets a snippet define
   # `defmodule User` and then use `%User{}` a few lines below.
   defp eval_sequentially(code) do
-    quoted = Code.string_to_quoted!(code, file: "playground.exs", columns: true)
+    quoted = Code.string_to_quoted!(code, file: "snippet.exs", columns: true)
 
     exprs =
       case quoted do
@@ -52,7 +52,7 @@ defmodule Playground.Runner do
         expr -> [expr]
       end
 
-    env = Code.env_for_eval(file: "playground.exs")
+    env = Code.env_for_eval(file: "snippet.exs")
 
     {value, _binding, _env} =
       Enum.reduce(exprs, {nil, [], env}, fn expr, {_value, binding, env} ->
@@ -91,7 +91,7 @@ defmodule Playground.Runner do
 
       true ->
         try do
-          {sql, params} = Playground.SQL.to_sql(value)
+          {sql, params} = PocketBeam.SQL.to_sql(value)
           %{ok: true, kind: "sql", result: inspect(value, pretty: true), sql: sql, params: Enum.map(params, &inspect/1)}
         rescue
           e -> %{ok: false, result: Exception.format(:error, e, prune(__STACKTRACE__))}
@@ -125,10 +125,10 @@ defmodule Playground.Runner do
     }
   end
 
-  # Hide the playground's own frames from stacktraces.
+  # Hide our own frames from stacktraces.
   defp prune(stacktrace) do
     Enum.take_while(stacktrace, fn
-      {Playground.Runner, _, _, _} -> false
+      {PocketBeam.Runner, _, _, _} -> false
       {:elixir, _, _, _} -> false
       {:erl_eval, _, _, _} -> false
       _ -> true

@@ -1,15 +1,15 @@
-defmodule Playground.Server do
+defmodule PocketBeam.Server do
   @moduledoc """
   Receives requests from the page through `Popcorn.Proxy`.
 
   Every run happens in its own process with a timeout, so an infinite loop
-  in a snippet never blocks the playground: the BEAM preempts it and we
+  in a snippet never blocks the app: the BEAM preempts it and we
   kill it when time is up.
   """
 
   use GenServer
 
-  @name :playground
+  @name :pocket_beam
   @timeout_ms 10_000
 
   def start_link(_opts), do: GenServer.start_link(__MODULE__, nil, name: @name)
@@ -36,7 +36,7 @@ defmodule Playground.Server do
   end
 
   defp run_with_timeout(mode, code) do
-    task = Task.async(fn -> Playground.Runner.run(mode, code) end)
+    task = Task.async(fn -> PocketBeam.Runner.run(mode, code) end)
 
     case Task.yield(task, @timeout_ms) || Task.shutdown(task, :brutal_kill) do
       {:ok, result} ->
