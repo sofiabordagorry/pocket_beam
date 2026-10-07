@@ -1,0 +1,334 @@
+import { Popcorn } from "@swmansion/popcorn";
+import { EditorView, basicSetup } from "codemirror";
+import { keymap } from "@codemirror/view";
+import { EditorState, Prec } from "@codemirror/state";
+import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { setDiagnostics } from "@codemirror/lint";
+import { tags as t } from "@lezer/highlight";
+import { elixir } from "codemirror-lang-elixir";
+import { formatDialect, postgresql } from "sql-formatter";
+import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from "lz-string";
+import { EXAMPLES } from "./examples.js";
+
+const $ = (id) => document.getElementById(id);
+const els = {
+  versions: $("versions"),
+  examples: $("examples"),
+  run: $("run"),
+  share: $("share"),
+  output: $("output"),
+  status: $("status"),
+};
+
+// ---------------------------------------------------------------------------
+// State: one buffer per mode, restored from the URL or a local draft
+// ---------------------------------------------------------------------------
+
+const DRAFT_KEY = "elixir-playground:drafts";
+let mode = "elixir";
+const buffers = {
+  elixir: EXAMPLES.elixir[0].code,
+  ecto: EXAMPLES.ecto[0].code,
+};
+
+try {
+  Object.assign(buffers, JSON.parse(localStorage.getItem(DRAFT_KEY) ?? "{}"));
+} catch {}
+
+const shared = readShareLink();
+if (shared) {
+  mode = shared.mode;
+  buffers[shared.mode] = shared.code;
+}
+
+function saveDrafts() {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(buffers));
+  } catch {}
+}
+
+// ---------------------------------------------------------------------------
+// Editor
+// ---------------------------------------------------------------------------
+
+const highlight = HighlightStyle.define([
+  { tag: [t.keyword, t.controlKeyword, t.definitionKeyword, t.operatorKeyword], color: "#c9a6f0" },
+  { tag: [t.atom, t.bool, t.special(t.string)], color: "#8fd6c4" },
+  { tag: [t.string, t.character], color: "#f4d58d" },
+  { tag: [t.number, t.integer, t.float], color: "#ffb08a" },
+  { tag: [t.comment, t.lineComment], color: "#8a7c99", fontStyle: "italic" },
+  { tag: [t.function(t.variableName), t.function(t.propertyName)], color: "#7fc8ff" },
+  { tag: [t.namespace, t.className, t.typeName], color: "#f4b942" },
+  { tag: [t.attributeName, t.propertyName], color: "#8fd6c4" },
+  { tag: t.operator, color: "#e6a1c8" },
+]);
+
+const theme = EditorView.theme(
+  {
+    "&": { backgroundColor: "#1c1424", color: "#f6f1e7", fontSize: "14px" },
+    ".cm-content": { fontFamily: "'JetBrains Mono', monospace", fontVariantLigatures: "none", caretColor: "#f4b942", padding: "14px 0" },
+    ".cm-gutters": { backgroundColor: "#1c1424", color: "#5e5070", border: "none" },
+    ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: "#241a2e" },
+    "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": { backgroundColor: "#4a3566 !important" },
+    ".cm-cursor": { borderLeftColor: "#f4b942" },
+    ".cm-tooltip": { backgroundColor: "#2b2036", border: "1px solid #3a2e46", color: "#f6f1e7" },
+    ".cm-diagnostic": { fontFamily: "'JetBrains Mono', monospace", whiteSpace: "pre-wrap" },
+  },
+  { dark: true },
+);
+
+const runKeys = Prec.highest(
+  keymap.of([
+    { key: "Mod-Enter", run: () => (run(), true) },
+    { key: "Shift-Enter", run: () => (run(), true) },
+  ]),
+);
+
+const editor = new EditorView({
+  parent: $("editor"),
+  state: makeState(buffers[mode]),
+});
+
+function makeState(doc) {
+  return EditorState.create({
+    doc,
+    extensions: [
+      basicSetup,
+      elixir(),
+      syntaxHighlighting(highlight),
+      theme,
+      runKeys,
+      EditorView.updateListener.of((update) => {
+        if (update.docChanged) {
+          buffers[mode] = update.state.doc.toString();
+          saveDrafts();
+        }
+      }),
+    ],
+  });
+}
+
+function setMode(next) {
+  if (next === mode) return;
+  buffers[mode] = editor.state.doc.toString();
+  mode = next;
+  editor.setState(makeState(buffers[mode]));
+  document.querySelectorAll(".tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.mode === mode));
+  fillExamples();
+  els.output.innerHTML = `<p class="hint">${
+    mode === "ecto"
+      ? "Define schemas and end with a query or a changeset. You get the Postgres SQL, or the changeset's changes and errors. No database needed."
+      : "Write some Elixir and press <b>Run</b>. It compiles and runs here, in your browser: no server sees your code."
+  }</p>`;
+}
+
+function fillExamples() {
+  els.examples.innerHTML = `<option value="">Examples…</option>`;
+  EXAMPLES[mode].forEach((example, i) => {
+    const option = document.createElement("option");
+    option.value = i;
+    option.textContent = example.name;
+    els.examples.append(option);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Output
+// ---------------------------------------------------------------------------
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs)) {
+    if (key === "class") node.className = value;
+    else if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
+    else node.setAttribute(key, value);
+  }
+  for (const child of children.flat()) {
+    if (child == null || child === false) continue;
+    node.append(child instanceof Node ? child : document.createTextNode(String(child)));
+  }
+  return node;
+}
+
+function block(title, meta, ...content) {
+  return el("div", { class: "block" }, el("h2", {}, title, meta ? el("span", { class: "meta" }, meta) : null), ...content);
+}
+
+function showDiagnosticsInEditor(diagnostics) {
+  const doc = editor.state.doc;
+  const marks = diagnostics
+    .filter((d) => d.line && d.line <= doc.lines)
+    .map((d) => {
+      const line = doc.line(d.line);
+      const from = d.column ? Math.min(line.from + d.column - 1, line.to) : line.from;
+      return { from, to: line.to > from ? line.to : from, severity: d.severity === "error" ? "error" : "warning", message: d.message };
+    });
+  editor.dispatch(setDiagnostics(editor.state, marks));
+}
+
+function goToLine(lineNumber) {
+  if (!lineNumber || lineNumber > editor.state.doc.lines) return;
+  const line = editor.state.doc.line(lineNumber);
+  editor.dispatch({ selection: { anchor: line.from }, scrollIntoView: true });
+  editor.focus();
+}
+
+function render(res) {
+  const out = [];
+
+  if (res.diagnostics.length) {
+    out.push(
+      block(
+        res.diagnostics.length === 1 ? "1 warning" : `${res.diagnostics.length} warnings`,
+        "from the compiler and the type checker",
+        res.diagnostics.map((d) =>
+          el(
+            "div",
+            { class: `diagnostic ${d.severity}`, onclick: () => goToLine(d.line) },
+            el("div", { class: "where" }, `${d.severity} · line ${d.line ?? "?"}`),
+            el("pre", {}, d.message.trim()),
+          ),
+        ),
+      ),
+    );
+  }
+
+  if (res.kind === "sql") {
+    let sql = res.sql;
+    try {
+      sql = formatDialect(res.sql, { dialect: postgresql, keywordCase: "upper" });
+    } catch {}
+    out.push(block("SQL", "PostgreSQL", el("pre", { class: "sql" }, sql)));
+    out.push(
+      block(
+        "Parameters",
+        null,
+        res.params.length ? el("table", {}, res.params.map((p, i) => el("tr", {}, el("td", {}, `$${i + 1}`), el("td", {}, p)))) : el("pre", {}, "none"),
+      ),
+    );
+  }
+
+  if (res.kind === "changeset") {
+    const cs = res.changeset;
+    out.push(block("Changeset", null, el("span", { class: `badge ${cs.valid ? "valid" : "invalid"}` }, cs.valid ? "valid" : "invalid")));
+    if (cs.errors.length) {
+      out.push(block("Errors", null, el("table", {}, cs.errors.map((e) => el("tr", {}, el("td", {}, e.field), el("td", {}, e.messages.join(", ")))))));
+    }
+    out.push(block("Changes", null, el("pre", {}, cs.changes)));
+  }
+
+  if (res.stdout) out.push(block("Output", null, el("pre", {}, res.stdout)));
+
+  if (res.kind !== "sql" || !res.ok) {
+    out.push(block(res.ok ? "Result" : "Error", `${res.time_ms} ms`, el("pre", { class: `result ${res.ok ? "" : "error"}` }, res.result)));
+  } else {
+    out.push(block("Query", `${res.time_ms} ms`, el("pre", {}, res.result)));
+  }
+
+  els.output.replaceChildren(...out);
+}
+
+// ---------------------------------------------------------------------------
+// Sharing
+// ---------------------------------------------------------------------------
+
+function readShareLink() {
+  const match = location.hash.match(/^#(elixir|ecto)\/(.+)$/);
+  if (!match) return null;
+  const code = decompressFromEncodedURIComponent(match[2]);
+  return code ? { mode: match[1], code } : null;
+}
+
+async function share() {
+  const code = editor.state.doc.toString();
+  const url = `${location.origin}${location.pathname}#${mode}/${compressToEncodedURIComponent(code)}`;
+  history.replaceState(null, "", url);
+  try {
+    await navigator.clipboard.writeText(url);
+    toast("Link copied. The code lives in the link: no server stores it.");
+  } catch {
+    toast("Link ready in the address bar.");
+  }
+}
+
+function toast(message) {
+  const node = el("div", { class: "toast" }, message);
+  document.body.append(node);
+  setTimeout(() => node.remove(), 2600);
+}
+
+// ---------------------------------------------------------------------------
+// The BEAM
+// ---------------------------------------------------------------------------
+
+let popcorn = null;
+let running = false;
+
+async function run() {
+  if (!popcorn || running) return;
+  running = true;
+  els.run.disabled = true;
+  els.status.textContent = "Running…";
+
+  const code = editor.state.doc.toString();
+  const reply = await popcorn.genserver.call("playground", ["run", mode, code], { timeoutMs: 20_000 });
+
+  running = false;
+  els.run.disabled = false;
+
+  if (!reply.ok) {
+    els.status.textContent = "The BEAM did not answer. Reload the page to restart it.";
+    console.error(reply.error);
+    return;
+  }
+
+  const res = reply.data;
+  showDiagnosticsInEditor(res.diagnostics);
+  render(res);
+  els.status.textContent = `${res.ok ? "Ran" : "Failed"} in ${res.time_ms} ms`;
+}
+
+async function boot() {
+  const started = performance.now();
+  els.status.textContent = "Downloading and booting the BEAM…";
+
+  const result = await Popcorn.init({ onStdout: () => {}, onStderr: console.error });
+  if (!result.ok) {
+    els.status.textContent = "Could not start the BEAM. Check the console.";
+    throw result.error;
+  }
+
+  popcorn = result.data;
+  const info = await popcorn.genserver.call("playground", "info");
+  if (info.ok) {
+    const { elixir: ex, otp, ecto } = info.data;
+    els.versions.textContent = `Elixir ${ex} · Erlang/OTP ${otp} · Ecto ${ecto}`;
+  }
+
+  els.run.disabled = false;
+  els.status.textContent = `BEAM ready in ${Math.round(performance.now() - started)} ms`;
+}
+
+// ---------------------------------------------------------------------------
+// Wiring
+// ---------------------------------------------------------------------------
+
+document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => setMode(tab.dataset.mode)));
+
+els.examples.addEventListener("change", () => {
+  const example = EXAMPLES[mode][Number(els.examples.value)];
+  if (!example) return;
+  editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: example.code } });
+  els.examples.value = "";
+});
+
+els.run.addEventListener("click", run);
+els.share.addEventListener("click", share);
+
+if (mode !== "elixir") {
+  const target = mode;
+  mode = "elixir";
+  setMode(target);
+}
+fillExamples();
+boot();
