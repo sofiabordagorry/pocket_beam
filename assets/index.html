@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elixir Playground</title>
+    <meta name="description" content="Run Elixir and Ecto in your browser. No server, no install." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      crossorigin="anonymous"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap"
+    />
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo" aria-hidden="true">💧</span>
+        <div>
+          <h1>Elixir Playground</h1>
+          <p id="versions">Booting the BEAM in your browser…</p>
+        </div>
+      </div>
+
+      <nav class="tabs" role="tablist">
+        <button class="tab active" data-mode="elixir" role="tab">Elixir</button>
+        <button class="tab" data-mode="ecto" role="tab">Ecto</button>
+      </nav>
+
+      <div class="actions">
+        <select id="examples" aria-label="Examples"></select>
+        <button id="share" class="secondary">Share</button>
+        <button id="run" disabled>Run <kbd>⌘↵</kbd></button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="pane editor-pane">
+        <div id="editor"></div>
+      </section>
+
+      <section class="pane output-pane" aria-live="polite">
+        <div id="output">
+          <p class="hint">Write some Elixir and press <b>Run</b>. It compiles and runs here, in your browser: no server sees your code.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="statusbar">
+      <span id="status">Loading…</span>
+      <span>Powered by <a href="https://github.com/software-mansion/popcorn" target="_blank" rel="noreferrer">Popcorn</a></span>
+    </footer>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
