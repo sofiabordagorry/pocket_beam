@@ -16,6 +16,8 @@ runs in your tab, on the real BEAM (Erlang/OTP 29) compiled to WebAssembly with
 
 - Write schemas and a query: you get the **Postgres SQL** and its parameters.
   No database involved.
+- **Copy with values** gives you the same SQL with each parameter written as a
+  Postgres literal, ready to paste into `psql`.
 - End with a changeset: you see whether it is valid, its changes and its errors.
 
 **Sharing**: the code is compressed into the link, so sharing needs no backend.
