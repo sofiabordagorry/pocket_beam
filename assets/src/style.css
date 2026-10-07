@@ -11,7 +11,34 @@
   --error: #ff8a7a;
   --warning: #f4b942;
   --ok: #8fd694;
+  --error-line: #6b3434;
+  --valid-bg: #24442a;
+  --invalid-bg: #4a2626;
+  --on-accent: #1c1424;
+  --field: #f4b942;
   --mono: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: #f6f1e7;
+  --panel: #fffdf8;
+  --panel-2: #efe8da;
+  --line: #ddd3c4;
+  --text: #1c1424;
+  --muted: #6e6378;
+  --accent: #f4b942;
+  --purple: #7a4fb0;
+  --purple-strong: #7a4fb0;
+  --error: #b3261e;
+  --warning: #b7791f;
+  --ok: #2e7d32;
+  --error-line: #e8b4ae;
+  --valid-bg: #dcefdc;
+  --invalid-bg: #f6dada;
+  --on-accent: #1c1424;
+  --field: #8a4b00;
+  color-scheme: light;
 }
 
 * {
@@ -86,7 +113,7 @@ h1 {
 
 .tab.active {
   background: var(--purple-strong);
-  color: var(--text);
+  color: #f6f1e7;
 }
 
 .actions {
@@ -114,7 +141,7 @@ select {
 
 button {
   background: var(--accent);
-  color: var(--bg);
+  color: var(--on-accent);
   border: none;
   border-radius: 8px;
   padding: 9px 16px;
@@ -210,7 +237,7 @@ pre {
 }
 
 pre.result.error {
-  border-color: #6b3434;
+  border-color: var(--error-line);
   color: var(--error);
 }
 
@@ -252,12 +279,12 @@ pre.sql {
 }
 
 .badge.valid {
-  background: #24442a;
+  background: var(--valid-bg);
   color: var(--ok);
 }
 
 .badge.invalid {
-  background: #4a2626;
+  background: var(--invalid-bg);
   color: var(--error);
 }
 
@@ -275,7 +302,7 @@ td {
 
 td:first-child {
   font-family: var(--mono);
-  color: var(--accent);
+  color: var(--field);
   width: 30%;
 }
 
@@ -301,7 +328,7 @@ td:first-child {
   left: 50%;
   transform: translateX(-50%);
   background: var(--accent);
-  color: var(--bg);
+  color: var(--on-accent);
   padding: 10px 16px;
   border-radius: 8px;
   font-weight: 700;

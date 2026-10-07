@@ -13,6 +13,14 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap"
     />
     <link rel="stylesheet" href="./src/style.css" />
+    <script>
+      // Apply the theme before the first paint, so the page never flashes.
+      try {
+        const saved = localStorage.getItem("elixir-playground:theme");
+        document.documentElement.dataset.theme =
+          saved === "light" || saved === "dark" ? saved : matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+      } catch {}
+    </script>
   </head>
   <body>
     <header class="topbar">
@@ -31,6 +39,7 @@
 
       <div class="actions">
         <select id="examples" aria-label="Examples"></select>
+        <button id="theme" class="secondary" aria-label="Switch between light and dark mode">Light</button>
         <button id="share" class="secondary">Share</button>
         <button id="run" disabled>Run <kbd>⌘↵</kbd></button>
       </div>

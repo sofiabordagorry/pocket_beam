@@ -1,7 +1,7 @@
 import { Popcorn } from "@swmansion/popcorn";
 import { EditorView, basicSetup } from "codemirror";
 import { keymap } from "@codemirror/view";
-import { EditorState, Prec } from "@codemirror/state";
+import { Compartment, EditorState, Prec } from "@codemirror/state";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { setDiagnostics } from "@codemirror/lint";
 import { tags as t } from "@lezer/highlight";
@@ -51,31 +51,77 @@ function saveDrafts() {
 // Editor
 // ---------------------------------------------------------------------------
 
-const highlight = HighlightStyle.define([
-  { tag: [t.keyword, t.controlKeyword, t.definitionKeyword, t.operatorKeyword], color: "#c9a6f0" },
-  { tag: [t.atom, t.bool, t.special(t.string)], color: "#8fd6c4" },
-  { tag: [t.string, t.character], color: "#f4d58d" },
-  { tag: [t.number, t.integer, t.float], color: "#ffb08a" },
-  { tag: [t.comment, t.lineComment], color: "#8a7c99", fontStyle: "italic" },
-  { tag: [t.function(t.variableName), t.function(t.propertyName)], color: "#7fc8ff" },
-  { tag: [t.namespace, t.className, t.typeName], color: "#f4b942" },
-  { tag: [t.attributeName, t.propertyName], color: "#8fd6c4" },
-  { tag: t.operator, color: "#e6a1c8" },
-]);
-
-const theme = EditorView.theme(
-  {
-    "&": { backgroundColor: "#1c1424", color: "#f6f1e7", fontSize: "14px" },
-    ".cm-content": { fontFamily: "'JetBrains Mono', monospace", fontVariantLigatures: "none", caretColor: "#f4b942", padding: "14px 0" },
-    ".cm-gutters": { backgroundColor: "#1c1424", color: "#5e5070", border: "none" },
-    ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: "#241a2e" },
-    "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": { backgroundColor: "#4a3566 !important" },
-    ".cm-cursor": { borderLeftColor: "#f4b942" },
-    ".cm-tooltip": { backgroundColor: "#2b2036", border: "1px solid #3a2e46", color: "#f6f1e7" },
-    ".cm-diagnostic": { fontFamily: "'JetBrains Mono', monospace", whiteSpace: "pre-wrap" },
+// One palette per theme. The page's CSS reads data-theme on <html>; the
+// editor gets its own theme through a compartment so it can switch live.
+const PALETTES = {
+  dark: {
+    bg: "#1c1424", text: "#f6f1e7", gutter: "#5e5070", activeLine: "#241a2e", selection: "#4a3566",
+    cursor: "#f4b942", tooltip: "#2b2036", tooltipBorder: "#3a2e46",
+    keyword: "#c9a6f0", atom: "#8fd6c4", string: "#f4d58d", number: "#ffb08a", comment: "#8a7c99",
+    func: "#7fc8ff", module: "#f4b942", operator: "#e6a1c8",
   },
-  { dark: true },
-);
+  light: {
+    bg: "#fbf8f1", text: "#1c1424", gutter: "#a89cb4", activeLine: "#f3ecdf", selection: "#e3d5f3",
+    cursor: "#7a4fb0", tooltip: "#fffdf8", tooltipBorder: "#ddd3c4",
+    keyword: "#7a4fb0", atom: "#0e7c66", string: "#8a5a00", number: "#c2410c", comment: "#8a7f94",
+    func: "#1f6fb2", module: "#a15c00", operator: "#b4387a",
+  },
+};
+
+function editorTheme(name) {
+  const c = PALETTES[name];
+
+  const highlight = HighlightStyle.define([
+    { tag: [t.keyword, t.controlKeyword, t.definitionKeyword, t.operatorKeyword], color: c.keyword },
+    { tag: [t.atom, t.bool, t.special(t.string)], color: c.atom },
+    { tag: [t.string, t.character], color: c.string },
+    { tag: [t.number, t.integer, t.float], color: c.number },
+    { tag: [t.comment, t.lineComment], color: c.comment, fontStyle: "italic" },
+    { tag: [t.function(t.variableName), t.function(t.propertyName)], color: c.func },
+    { tag: [t.namespace, t.className, t.typeName], color: c.module },
+    { tag: [t.attributeName, t.propertyName], color: c.atom },
+    { tag: t.operator, color: c.operator },
+  ]);
+
+  const theme = EditorView.theme(
+    {
+      "&": { backgroundColor: c.bg, color: c.text, fontSize: "14px" },
+      ".cm-content": { fontFamily: "'JetBrains Mono', monospace", fontVariantLigatures: "none", caretColor: c.cursor, padding: "14px 0" },
+      ".cm-gutters": { backgroundColor: c.bg, color: c.gutter, border: "none" },
+      ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: c.activeLine },
+      "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": { backgroundColor: `${c.selection} !important` },
+      ".cm-cursor": { borderLeftColor: c.cursor },
+      ".cm-tooltip": { backgroundColor: c.tooltip, border: `1px solid ${c.tooltipBorder}`, color: c.text },
+      ".cm-diagnostic": { fontFamily: "'JetBrains Mono', monospace", whiteSpace: "pre-wrap" },
+    },
+    { dark: name === "dark" },
+  );
+
+  return [theme, syntaxHighlighting(highlight)];
+}
+
+const THEME_KEY = "elixir-playground:theme";
+const themeSlot = new Compartment();
+let currentTheme = initialTheme();
+document.documentElement.dataset.theme = currentTheme;
+
+function initialTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved === "light" || saved === "dark") return saved;
+  } catch {}
+  return matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
+function setTheme(name) {
+  currentTheme = name;
+  document.documentElement.dataset.theme = name;
+  editor.dispatch({ effects: themeSlot.reconfigure(editorTheme(name)) });
+  $("theme").textContent = name === "dark" ? "Light" : "Dark";
+  try {
+    localStorage.setItem(THEME_KEY, name);
+  } catch {}
+}
 
 const runKeys = Prec.highest(
   keymap.of([
@@ -95,8 +141,7 @@ function makeState(doc) {
     extensions: [
       basicSetup,
       elixir(),
-      syntaxHighlighting(highlight),
-      theme,
+      themeSlot.of(editorTheme(currentTheme)),
       runKeys,
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
@@ -323,6 +368,8 @@ els.examples.addEventListener("change", () => {
 });
 
 els.run.addEventListener("click", run);
+$("theme").addEventListener("click", () => setTheme(currentTheme === "dark" ? "light" : "dark"));
+$("theme").textContent = currentTheme === "dark" ? "Light" : "Dark";
 els.share.addEventListener("click", share);
 
 if (mode !== "elixir") {
