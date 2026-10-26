@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="drop" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#e3cbff"/>
+      <stop offset="0.55" stop-color="#a77ee0"/>
+      <stop offset="1" stop-color="#5b3590"/>
+    </linearGradient>
+    <linearGradient id="pocket" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3d2c52"/>
+      <stop offset="1" stop-color="#2b2036"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#1c1424"/>
+  <!-- gota -->
+  <path d="M262 56C290 118 372 196 372 290C372 360 320 404 256 404C192 404 140 360 140 290C140 200 214 150 262 56Z" fill="url(#drop)"/>
+  <path d="M236 128C214 172 186 214 186 270C186 300 198 322 214 336C204 300 210 250 236 128Z" fill="#fff" opacity="0.35"/>
+  <!-- bolsillo -->
+  <path d="M104 262H408V372C408 412 344 448 256 470C168 448 104 412 104 372Z" fill="url(#pocket)"/>
+  <path d="M124 282H388V368C388 400 334 430 256 448C178 430 124 400 124 368Z" fill="none" stroke="#f4b942" stroke-width="7" stroke-dasharray="16 12" stroke-linecap="round"/>
+  <rect x="104" y="252" width="304" height="20" rx="10" fill="#4a3863"/>
+  <circle cx="128" cy="262" r="7" fill="#f4b942"/>
+  <circle cx="384" cy="262" r="7" fill="#f4b942"/>
+</svg>

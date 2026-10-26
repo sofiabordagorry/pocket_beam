@@ -78,7 +78,9 @@ body {
 }
 
 .logo {
-  font-size: 28px;
+  display: block;
+  width: 36px;
+  height: 36px;
 }
 
 h1 {
