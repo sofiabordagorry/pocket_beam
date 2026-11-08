@@ -20,7 +20,7 @@ defmodule PocketBeam.MixProject do
 
   defp deps do
     [
-      {:popcorn, "0.4.0-next.2"},
+      {:popcorn, "~> 1.0"},
       {:ecto_sql, "~> 3.13"},
       # Only needed at compile time: it makes Ecto's Postgres SQL generator
       # available. Nothing connects to a database in the browser.

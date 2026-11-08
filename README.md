@@ -63,10 +63,3 @@ PocketBeam.Supervisor
   internally, without a `Repo` or a connection.
 - `assets/src/main.js` is the page: CodeMirror, the output panel and the share
   link.
-
-## Known issue: Popcorn's crypto runtime
-
-Ecto depends on `:crypto`, so the app needs Popcorn's `crypto` runtime variant.
-The Hex package of `popcorn 0.4.0-next.2` does not include that runtime's
-manifest (the npm package does). `assets/scripts/crypto-runtime.mjs` copies it
-from `node_modules` into `deps/popcorn` before every `dev` and `build`.
