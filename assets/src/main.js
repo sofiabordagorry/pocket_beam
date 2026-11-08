@@ -347,7 +347,7 @@ async function run() {
   els.status.textContent = "Running…";
 
   const code = editor.state.doc.toString();
-  const reply = await popcorn.genserver.call("pocket_beam", ["run", mode, code], { timeoutMs: 20_000 });
+  const reply = await popcorn.tryCall("pocket_beam", ["run", mode, code], { timeoutMs: 20_000 });
 
   running = false;
   els.run.disabled = false;
@@ -368,14 +368,14 @@ async function boot() {
   const started = performance.now();
   els.status.textContent = "Downloading and booting the BEAM…";
 
-  const result = await Popcorn.init({ onStdout: () => {}, onStderr: console.error });
-  if (!result.ok) {
+  try {
+    popcorn = await Popcorn.init({ onStdout: () => {}, onStderr: console.error });
+  } catch (error) {
     els.status.textContent = "Could not start the BEAM. Check the console.";
-    throw result.error;
+    throw error;
   }
 
-  popcorn = result.data;
-  const info = await popcorn.genserver.call("pocket_beam", "info");
+  const info = await popcorn.tryCall("pocket_beam", "info");
   if (info.ok) {
     const { elixir: ex, otp, ecto } = info.data;
     els.versions.textContent = `Elixir ${ex} · Erlang/OTP ${otp} · Ecto ${ecto}`;
