@@ -26,6 +26,9 @@ const els = {
 
 const DRAFT_KEY = "pocket-beam:drafts";
 let mode = "elixir";
+// True while an example is being loaded, so that edit doesn't clear the
+// example's name from the dropdown.
+let loadingExample = false;
 const buffers = {
   elixir: EXAMPLES.elixir[0].code,
   ecto: EXAMPLES.ecto[0].code,
@@ -55,13 +58,13 @@ function saveDrafts() {
 // editor gets its own theme through a compartment so it can switch live.
 const PALETTES = {
   dark: {
-    bg: "#1c1424", text: "#f6f1e7", gutter: "#5e5070", activeLine: "#241a2e", selection: "#4a3566",
+    bg: "#18111f", text: "#f6f1e7", gutter: "#5e5070", activeLine: "#1f1727", selection: "#4a3566",
     cursor: "#f4b942", tooltip: "#2b2036", tooltipBorder: "#3a2e46",
     keyword: "#c9a6f0", atom: "#8fd6c4", string: "#f4d58d", number: "#ffb08a", comment: "#8a7c99",
     func: "#7fc8ff", module: "#f4b942", operator: "#e6a1c8",
   },
   light: {
-    bg: "#fbf8f1", text: "#1c1424", gutter: "#a89cb4", activeLine: "#f3ecdf", selection: "#e3d5f3",
+    bg: "#fffdf8", text: "#1c1424", gutter: "#a89cb4", activeLine: "#f8f2e8", selection: "#e3d5f3",
     cursor: "#7a4fb0", tooltip: "#fffdf8", tooltipBorder: "#ddd3c4",
     keyword: "#7a4fb0", atom: "#0e7c66", string: "#8a5a00", number: "#c2410c", comment: "#8a7f94",
     func: "#1f6fb2", module: "#a15c00", operator: "#b4387a",
@@ -117,7 +120,6 @@ function setTheme(name) {
   currentTheme = name;
   document.documentElement.dataset.theme = name;
   editor.dispatch({ effects: themeSlot.reconfigure(editorTheme(name)) });
-  $("theme").textContent = name === "dark" ? "Light" : "Dark";
   try {
     localStorage.setItem(THEME_KEY, name);
   } catch {}
@@ -147,6 +149,7 @@ function makeState(doc) {
         if (update.docChanged) {
           buffers[mode] = update.state.doc.toString();
           saveDrafts();
+          if (!loadingExample) els.examples.value = "";
         }
       }),
     ],
@@ -160,15 +163,34 @@ function setMode(next) {
   editor.setState(makeState(buffers[mode]));
   document.querySelectorAll(".tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.mode === mode));
   fillExamples();
-  els.output.innerHTML = `<p class="hint">${
+  showEmpty();
+}
+
+function showEmpty() {
+  const [title, text] =
     mode === "ecto"
-      ? "Define schemas and end with a query or a changeset. You get the Postgres SQL, or the changeset's changes and errors. No database needed."
-      : "Write some Elixir and press <b>Run</b>. It compiles and runs here, in your browser: no server sees your code."
-  }</p>`;
+      ? ["Schemas in, SQL out", "Define schemas and end with a query or a changeset."]
+      : ["Write some Elixir", "It compiles and runs here, in your browser!"];
+  const kbd = (key) => el("kbd", {}, key);
+  els.output.replaceChildren(
+    el(
+      "div",
+      { class: "empty" },
+      el("img", { src: "/favicon.svg", alt: "" }),
+      el("h2", {}, title),
+      el("p", {}, text),
+      el("p", {}, "Press ", kbd("⌘"), " ", kbd("↵"), " or ", kbd("⇧"), " ", kbd("↵"), " to run."),
+    ),
+  );
+}
+
+function setStatus(text, state) {
+  els.status.textContent = text;
+  els.status.dataset.state = state;
 }
 
 function fillExamples() {
-  els.examples.innerHTML = `<option value="">Examples…</option>`;
+  els.examples.innerHTML = `<option value="" disabled selected>Examples…</option>`;
   EXAMPLES[mode].forEach((example, i) => {
     const option = document.createElement("option");
     option.value = i;
@@ -285,7 +307,7 @@ function render(res) {
 
   if (res.kind === "changeset") {
     const cs = res.changeset;
-    out.push(block("Changeset", null, el("span", { class: `badge ${cs.valid ? "valid" : "invalid"}` }, cs.valid ? "valid" : "invalid")));
+    out.push(block("Changeset", null, el("span", { class: `badge ${cs.valid ? "valid" : "invalid"}` }, cs.valid ? "✓ Valid" : "✕ Invalid")));
     if (cs.errors.length) {
       out.push(block("Errors", null, el("table", {}, cs.errors.map((e) => el("tr", {}, el("td", {}, e.field), el("td", {}, e.messages.join(", ")))))));
     }
@@ -320,7 +342,7 @@ async function share() {
   history.replaceState(null, "", url);
   try {
     await navigator.clipboard.writeText(url);
-    toast("Link copied. The code lives in the link: no server stores it.");
+    toast("Link copied.");
   } catch {
     toast("Link ready in the address bar.");
   }
@@ -344,7 +366,7 @@ async function run() {
   if (!popcorn || running) return;
   running = true;
   els.run.disabled = true;
-  els.status.textContent = "Running…";
+  setStatus("Running…", "running");
 
   const code = editor.state.doc.toString();
   const reply = await popcorn.tryCall("pocket_beam", ["run", mode, code], { timeoutMs: 20_000 });
@@ -353,7 +375,7 @@ async function run() {
   els.run.disabled = false;
 
   if (!reply.ok) {
-    els.status.textContent = "The BEAM did not answer. Reload the page to restart it.";
+    setStatus("The BEAM did not answer. Reload the page to restart it.", "error");
     console.error(reply.error);
     return;
   }
@@ -361,17 +383,17 @@ async function run() {
   const res = reply.data;
   showDiagnosticsInEditor(res.diagnostics);
   render(res);
-  els.status.textContent = `${res.ok ? "Ran" : "Failed"} in ${res.time_ms} ms`;
+  setStatus(`${res.ok ? "Ran" : "Failed"} in ${res.time_ms} ms`, res.ok ? "ready" : "error");
 }
 
 async function boot() {
   const started = performance.now();
-  els.status.textContent = "Downloading and booting the BEAM…";
+  setStatus("Downloading and booting the BEAM…", "loading");
 
   try {
     popcorn = await Popcorn.init({ onStdout: () => {}, onStderr: console.error });
   } catch (error) {
-    els.status.textContent = "Could not start the BEAM. Check the console.";
+    setStatus("Could not start the BEAM. Check the console.", "error");
     throw error;
   }
 
@@ -382,7 +404,7 @@ async function boot() {
   }
 
   els.run.disabled = false;
-  els.status.textContent = `BEAM ready in ${Math.round(performance.now() - started)} ms`;
+  setStatus(`BEAM ready in ${Math.round(performance.now() - started)} ms`, "ready");
 }
 
 // ---------------------------------------------------------------------------
@@ -394,13 +416,13 @@ document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click",
 els.examples.addEventListener("change", () => {
   const example = EXAMPLES[mode][Number(els.examples.value)];
   if (!example) return;
+  loadingExample = true;
   editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: example.code } });
-  els.examples.value = "";
+  loadingExample = false;
 });
 
 els.run.addEventListener("click", run);
 $("theme").addEventListener("click", () => setTheme(currentTheme === "dark" ? "light" : "dark"));
-$("theme").textContent = currentTheme === "dark" ? "Light" : "Dark";
 els.share.addEventListener("click", share);
 
 if (mode !== "elixir") {
@@ -409,4 +431,5 @@ if (mode !== "elixir") {
   setMode(target);
 }
 fillExamples();
+showEmpty();
 boot();

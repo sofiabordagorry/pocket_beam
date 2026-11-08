@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Pocket BEAM</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="description" content="Run Elixir and Ecto in your browser. No server, no install." />
+    <meta name="description" content="Run Elixir and Ecto in your browser." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -25,42 +25,61 @@
   </head>
   <body>
     <header class="topbar">
-      <div class="brand">
-        <img class="logo" src="/favicon.svg" alt="" width="36" height="36" />
-        <div>
-          <h1>Pocket BEAM</h1>
-          <p id="versions">Booting the BEAM in your browser…</p>
-        </div>
-      </div>
+      <a class="brand" href="./">
+        <img class="logo" src="/favicon.svg" alt="" width="34" height="34" />
+        <span class="brand-text">
+          <span class="name">Pocket <b>BEAM</b></span>
+          <span class="tagline">Elixir &amp; Ecto, running in your tab</span>
+        </span>
+      </a>
 
-      <nav class="tabs" role="tablist">
-        <button class="tab active" data-mode="elixir" role="tab">Elixir</button>
-        <button class="tab" data-mode="ecto" role="tab">Ecto</button>
-      </nav>
-
-      <div class="actions">
-        <select id="examples" aria-label="Examples"></select>
-        <button id="theme" class="secondary" aria-label="Switch between light and dark mode">Light</button>
-        <button id="share" class="secondary">Share</button>
-        <button id="run" disabled>Run <kbd>⌘↵</kbd></button>
+      <div class="topbar-right">
+        <span id="versions" class="versions">Booting the BEAM…</span>
+        <button id="theme" class="icon-button" aria-label="Switch between light and dark mode" title="Switch theme">
+          <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="4.5" />
+            <path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" />
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" />
+          </svg>
+        </button>
+        <button id="share" class="ghost">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.2 1.2M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.2-1.2" />
+          </svg>
+          Share
+        </button>
       </div>
     </header>
 
     <main class="workspace">
       <section class="pane editor-pane">
+        <div class="pane-bar">
+          <nav class="tabs" role="tablist">
+            <button class="tab active" data-mode="elixir" role="tab">Elixir</button>
+            <button class="tab" data-mode="ecto" role="tab">Ecto</button>
+          </nav>
+          <select id="examples" aria-label="Examples"></select>
+          <button id="run" class="run" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" /></svg>
+            Run <kbd>⌘↵</kbd>
+          </button>
+        </div>
         <div id="editor"></div>
       </section>
 
-      <section class="pane output-pane" aria-live="polite">
-        <div id="output">
-          <p class="hint">Write some Elixir and press <b>Run</b>. It compiles and runs here, in your browser: no server sees your code.</p>
+      <section class="pane output-pane">
+        <div class="pane-bar">
+          <span class="pane-title">Output</span>
+          <span id="status" class="status" data-state="loading">Loading…</span>
         </div>
+        <div id="output" aria-live="polite"></div>
       </section>
     </main>
 
-    <footer class="statusbar">
-      <span id="status">Loading…</span>
-      <span>Powered by <a href="https://github.com/software-mansion/popcorn" target="_blank" rel="noreferrer">Popcorn</a></span>
+    <footer class="footer">
+    Powered by <a href="https://github.com/software-mansion/popcorn" target="_blank" rel="noreferrer">Popcorn</a>
     </footer>
 
     <script type="module" src="./src/main.js"></script>
