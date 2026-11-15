@@ -80,25 +80,6 @@ Counter.value(pid)
 `,
     },
     {
-      name: "Let it crash",
-      code: `# A supervisor restarts its children when they crash.
-children = [
-  %{id: :worker, start: {Agent, :start_link, [fn -> 0 end, [name: :worker]]}}
-]
-
-{:ok, _sup} = Supervisor.start_link(children, strategy: :one_for_one)
-
-before = Process.whereis(:worker)
-Process.exit(before, :kill)
-Process.sleep(50)
-later = Process.whereis(:worker)
-
-IO.puts("before: #{inspect(before)}")
-IO.puts("after:  #{inspect(later)}")
-{:restarted?, before != later}
-`,
-    },
-    {
       name: "Regex & dates",
       code: `# Full OTP: regexes, dates and the rest of the standard library.
 text = "Elixir 1.20 shipped on 2026-06-03, OTP 29 a few weeks before."
@@ -114,6 +95,50 @@ released = Date.from_iso8601!(date)
   weekday: Date.day_of_week(released),
   days_until_2027: Date.diff(~D[2027-01-01], released)
 }
+`,
+    },
+    {
+      name: "Speed without a JIT",
+      code: `# Sum 1..5,000,000 and time it. The first number is milliseconds.
+# Try the same code in iex: the BEAM there has a JIT, this one doesn't.
+{micros, sum} = :timer.tc(fn ->
+  Enum.reduce(1..5_000_000, 0, &+/2)
+end)
+
+{div(micros, 1000), sum}
+`,
+    },
+    {
+      name: "Kill a supervised process",
+      code: `# Start a supervisor with an Agent inside, kill the Agent and look again.
+# You get two different pids: the supervisor started a new one.
+children = [{Agent, fn -> 0 end}]
+{:ok, sup} = Supervisor.start_link(children, strategy: :one_for_one)
+
+[{_, before, _, _}] = Supervisor.which_children(sup)
+Process.exit(before, :kill)
+Process.sleep(50)
+[{_, later, _, _}] = Supervisor.which_children(sup)
+
+{before, later, Process.alive?(later)}
+`,
+    },
+    {
+      name: "Sequential vs parallel",
+      code: `# Run four heavy tasks one after another, then all four at once.
+# Result: {schedulers, sequential ms, parallel ms}.
+work = fn -> Enum.reduce(1..1_000_000, 0, &+/2) end
+
+{seq, _} = :timer.tc(fn ->
+  for _ <- 1..4, do: work.()
+end)
+
+{par, _} = :timer.tc(fn ->
+  tasks = for _ <- 1..4, do: Task.async(work)
+  Task.await_many(tasks)
+end)
+
+{System.schedulers_online(), div(seq, 1000), div(par, 1000)}
 `,
     },
   ],
