@@ -80,25 +80,6 @@ Counter.value(pid)
 `,
     },
     {
-      name: "Let it crash",
-      code: `# A supervisor restarts its children when they crash.
-children = [
-  %{id: :worker, start: {Agent, :start_link, [fn -> 0 end, [name: :worker]]}}
-]
-
-{:ok, _sup} = Supervisor.start_link(children, strategy: :one_for_one)
-
-before = Process.whereis(:worker)
-Process.exit(before, :kill)
-Process.sleep(50)
-later = Process.whereis(:worker)
-
-IO.puts("before: #{inspect(before)}")
-IO.puts("after:  #{inspect(later)}")
-{:restarted?, before != later}
-`,
-    },
-    {
       name: "Regex & dates",
       code: `# Full OTP: regexes, dates and the rest of the standard library.
 text = "Elixir 1.20 shipped on 2026-06-03, OTP 29 a few weeks before."
