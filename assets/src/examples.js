@@ -116,6 +116,50 @@ released = Date.from_iso8601!(date)
 }
 `,
     },
+    {
+      name: "Speed without a JIT",
+      code: `# Sum 1..5,000,000 and time it. The first number is milliseconds.
+# Try the same code in iex: the BEAM there has a JIT, this one doesn't.
+{micros, sum} = :timer.tc(fn ->
+  Enum.reduce(1..5_000_000, 0, &+/2)
+end)
+
+{div(micros, 1000), sum}
+`,
+    },
+    {
+      name: "Kill a supervised process",
+      code: `# Start a supervisor with an Agent inside, kill the Agent and look again.
+# You get two different pids: the supervisor started a new one.
+children = [{Agent, fn -> 0 end}]
+{:ok, sup} = Supervisor.start_link(children, strategy: :one_for_one)
+
+[{_, before, _, _}] = Supervisor.which_children(sup)
+Process.exit(before, :kill)
+Process.sleep(50)
+[{_, later, _, _}] = Supervisor.which_children(sup)
+
+{before, later, Process.alive?(later)}
+`,
+    },
+    {
+      name: "Sequential vs parallel",
+      code: `# Run four heavy tasks one after another, then all four at once.
+# Result: {schedulers, sequential ms, parallel ms}.
+work = fn -> Enum.reduce(1..1_000_000, 0, &+/2) end
+
+{seq, _} = :timer.tc(fn ->
+  for _ <- 1..4, do: work.()
+end)
+
+{par, _} = :timer.tc(fn ->
+  tasks = for _ <- 1..4, do: Task.async(work)
+  Task.await_many(tasks)
+end)
+
+{System.schedulers_online(), div(seq, 1000), div(par, 1000)}
+`,
+    },
   ],
   ecto: [
     {
